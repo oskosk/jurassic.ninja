@@ -20,7 +20,7 @@ add_action(
 				$features = array_merge( $defaults, $features );
 				if ( $features['content'] ) {
 					debug( '%s: Adding pre-generated content', $domain );
-					add_content();
+					add_content( $domain, $features );
 				}
 			},
 			1,
@@ -43,11 +43,17 @@ add_action(
 
 /**
  * Command to add content.
+ *
+ * @param string $domain The domain name of the new site.
+ * @param array  $features Array of features for the new site.
  */
-function add_content() {
+function add_content( $domain, $features ) {
+	$schema = ( isset( $features['ssl'] ) && $features['ssl'] ) ? 'https://' : 'http://';
+	$url = $schema . $domain;
 	$cmd = 'wget https://github.com/manovotny/wptest/archive/master.zip'
 		. ' && unzip master.zip'
-		. ' && echo "$(pwd) y $(pwd)/wptest-master/wptest.xml" | wptest-master/wptest-cli-install.sh';
+		. ' && echo "$(pwd) y $(pwd)/wptest-master/wptest.xml" | wptest-master/wptest-cli-install.sh'
+		. " && wp search-replace http://wpthemetestdata.wordpress.com $url";
 	add_filter(
 		'jurassic_ninja_feature_command',
 		function ( $s ) use ( $cmd ) {
