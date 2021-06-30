@@ -30,7 +30,6 @@ Recommended `/specialops` page content:
 </li>
 <li style="min-width: 30%;">
 <div class="form-group"><label for="php_version">&nbsp;PHP version:</label><br><select class="form-control" name="php_version" data-feature="php_version">
-<option value="php5.4">PHP 5.4</option>
 <option value="php5.6">PHP 5.6</option>
 <option value="php7.0">PHP 7.0</option>
 <option value="php7.2">PHP 7.2</option>
@@ -60,7 +59,9 @@ Recommended `/specialops` page content:
 [jn_jetpack_products_list]
 </li>
 <li>
-<div class="checkbox"><label><input type="checkbox" data-feature="jetpack-beta">&nbsp;Include Jetpack Beta</label></div>
+<div class="checkbox"><label><input type="radio" name="jetpack-beta" value="stable" data-feature="jetpack-beta">&nbsp;Include Jetpack Beta</label></div>
+<div class="checkbox"><label><input type="radio" name="jetpack-beta" value="dev" data-feature="jetpack-beta-dev">&nbsp;Include Jetpack Beta (Bleeding Edge)</label></div>
+<div class="checkbox"><label><input type="radio" name="jetpack-beta" value="none">&nbsp;Do not include Jetpack Beta</label></div>
 </li>
 <li>
 <div class="form-group"><label for="jetpack_branch">Jetpack Branch:</label><br><input id="jetpack_branch" class="form-control" role="search" disabled="disabled" list="jetpack_branches" type="text" value="" placeholder="Requires Jetpack Beta plugin" data-feature="branch" aria-hidden="false"><br>

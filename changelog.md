@@ -1,3 +1,14 @@
+5.11 / TBD
+==================
+
+  * Disconnect Jetpack upon site purge.
+  * Add support for installing Jetpack Beta's bleeding edge.
+
+5.10.1 / 2021-05-05
+==================
+
+  * Fixed WooCommerce Smooth Generator feature
+
 5.10 / 2021-04-20
 ==================
 

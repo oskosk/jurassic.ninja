@@ -46,6 +46,7 @@ require_once __DIR__ . '/class-serverpilotprovisioner.php';
 define( 'REST_API_NAMESPACE', 'jurassic.ninja' );
 define( 'COMPANION_PLUGIN_URL', 'https://github.com/Automattic/companion/archive/master.zip' );
 define( 'JETPACK_BETA_PLUGIN_URL', 'https://github.com/Automattic/jetpack-beta/releases/latest/download/jetpack-beta.zip' );
+define( 'JETPACK_BETA_PLUGIN_DEV_URL', 'https://github.com/Automattic/jetpack-beta/archive/master.zip' );
 define( 'SUBDOMAIN_MULTISITE_HTACCESS_TEMPLATE_URL', 'https://gist.githubusercontent.com/oskosk/8cac852c793df5e4946463e2e55dfdd6/raw/a60ce4122a69c1dd36c623c9b999c36c9c8d3db8/gistfile1.txt' );
 define( 'SUBDIR_MULTISITE_HTACCESS_TEMPLATE_URL', 'https://gist.githubusercontent.com/oskosk/f5febd1bb65a2ace3d35feac949b47fd/raw/6ea8ffa013056f6793d3e8775329ec74d3304835/gistfile1.txt' );
 define( 'REGULAR_SITE_HTACCESS_TEMPLATE_URL', 'https://gist.githubusercontent.com/oskosk/0dab794274742af9caddefbc73f0ad80/raw/504f60da86969a9d55487f0c4821d06928a97218/.htaccess' );

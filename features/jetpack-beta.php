@@ -36,7 +36,10 @@ add_action(
 				$features = array_merge( $defaults, $features );
 				if ( $features['jetpack-beta'] ) {
 					debug( '%s: Adding Jetpack Beta Tester Plugin', $domain );
-					add_jetpack_beta_plugin();
+					add_jetpack_beta_plugin( false );
+				} elseif ( $features['jetpack-beta-dev'] ) {
+					debug( '%s: Adding Jetpack Beta Tester Plugin (Bleeding Edge)', $domain );
+					add_jetpack_beta_plugin( true );
 				}
 
 				if ( $features['branch'] ) {
@@ -114,9 +117,11 @@ add_action(
 
 /**
  * Installs and activates Jetpack Beta Tester plugin on the site.
+ *
+ * @param bool $dev Install bleeding edge version of the Jetpack Beta plugin.
  */
-function add_jetpack_beta_plugin() {
-	$jetpack_beta_plugin_url = JETPACK_BETA_PLUGIN_URL;
+function add_jetpack_beta_plugin( $dev = false ) {
+	$jetpack_beta_plugin_url = ( $dev ) ? JETPACK_BETA_PLUGIN_DEV_URL : JETPACK_BETA_PLUGIN_URL;
 	$cmd = "wp plugin install $jetpack_beta_plugin_url --activate";
 	add_filter(
 		'jurassic_ninja_feature_command',
