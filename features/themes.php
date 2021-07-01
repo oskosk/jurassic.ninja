@@ -18,6 +18,7 @@ add_action(
 	function () {
 		$allowlist = array(
 			'tt1-blocks' => 'FSE: 2021 but with Blocks',
+			'blockbase'  => 'Blockbase (FSE)',
 		);
 		// Set all defaults to false.
 		// Will probably add a filter here.
