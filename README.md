@@ -83,11 +83,11 @@ Create a new page and call it "Specialops". You can use the contents of [special
 
 3. Configure the top-domain on which this is going to create sites.
 
-### Using a docker container for testing
+### Using a Docker container for testing
 
-It may be convenient to use this plugin using a docker container for local development.
+It may be convenient to test this plugin using the [Jetpack monorepo Docker setup](https://github.com/Automattic/jetpack/blob/master/tools/docker/README.md).
 
-Make sure that [docker is installed and running](https://docs.docker.com/install/) before proceeding.
+Make sure that your copy of this repo and the Jetpack monorepo are stored within the same directory, and that [Docker is installed and running](https://docs.docker.com/install/) before proceeding.
 
 1. Create `jndb` folder in the root of this source code, where WordPress DB will be stored:
 
@@ -95,15 +95,15 @@ Make sure that [docker is installed and running](https://docs.docker.com/install
 mkdir ./jndb
 ```
 
-1. create and run docker containers:
+2. create and run Docker containers:
 
 ```sh
 docker-compose up
 ```
 
-1. Navigate to <http://localhost> to create WordPress site, Activate Jurassic Ninja plugin. Other plugins are optional
+3. Navigate to <http://localhost> to create WordPress site, Activate Jurassic Ninja plugin. Other plugins are optional
 
-1. Setup Jurassic Ninja plugin as menitioned above
+4. Setup Jurassic Ninja plugin as mentioned above
 
 ### Gotchas
 
