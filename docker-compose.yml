@@ -8,35 +8,33 @@ services:
       MYSQL_DATABASE: wordpress
     volumes:
     - ./jndb:/var/lib/mysql
-    ports:
-      - "${PORT_MYSQL:-3306}:3306"
     env_file:
-      - ../jetpack/docker/default.env
-      - ../jetpack/docker/.env
+      - ../jetpack/tools/docker/default.env
+      - ../jetpack/tools/docker/.env
 
   wordpress:
     container_name: jn_wordpress
     depends_on:
       - db
-    build: ../jetpack/docker
+    build: ../jetpack/tools/docker
     image: jn_wordpress:localbuild
     ports:
       - "${PORT_WORDPRESS:-80}:80"
     env_file:
-      - ../jetpack/docker/default.env
-      - ../jetpack/docker/.env
+      - ../jetpack/tools/docker/default.env
+      - ../jetpack/tools/docker/.env
     environment:
       - HOST_PORT=${PORT_WORDPRESS}
       - WORDPRESS_DB_PASSWORD=wordpress
       - XDEBUG_CONFIG=_host=10.0.1.19
     volumes:
-      - ../jetpack:/var/www/html/wp-content/plugins/jetpack
-      - ../jetpack/docker/wordpress:/var/www/html
-      - ../jetpack/docker/logs/apache2:/var/log/apache2
-      - ../jetpack/docker/logs/php:/var/log/php
-      - ../jetpack/docker/bin:/var/scripts
-      - ../jetpack/docker/wordpress-develop:/tmp/wordpress-develop
+      - ../jetpack/projects/plugins/jetpack:/var/www/html/wp-content/plugins/jetpack
+      - ../jetpack/tools/docker/wordpress:/var/www/html
+      - ../jetpack/tools/docker/logs/apache2:/var/log/apache2
+      - ../jetpack/tools/docker/logs/php:/var/log/php
+      - ../jetpack/tools/docker/bin:/var/scripts
+      - ../jetpack/tools/docker/wordpress-develop:/tmp/wordpress-develop
       - ../errors:/var/www/html/wp-content/plugins/errors
       - ./:/var/www/html/wp-content/plugins/jurassic.ninja
       - ../jurassic.ninja-ext:/var/www/html/wp-content/plugins/jurassic.ninja-ext
-  
+

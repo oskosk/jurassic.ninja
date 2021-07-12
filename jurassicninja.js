@@ -4,7 +4,8 @@ const SPECIALOPS_CREATE_PAGE_SLUG = '/specialops';
 
 const originalProgressText = jQuery( '#progress' ).text();
 const originalProgressImage = jQuery( '#img1' ).attr( 'src' );
-let availableJetpackBetaBranches = [];
+let availableJetpackBetaPlugins = [];
+let availableJetpackBetaBranches = []; // Deprecated.
 init();
 
 function init() {
@@ -58,34 +59,45 @@ function launchSite( $, features, resetSpinner = false ) {
 }
 
 function collectFeaturesFromFormInputs() {
-	const reduce = Array.prototype.reduce;
+	const features = {};
+	const assign = ( el, v ) => {
+		let n = features;
+		const keys = jQuery( el ).data( 'feature' ).split( '.' );
+		while ( keys.length > 1 ) {
+			const k = keys.shift();
+			if ( typeof( n[k] ) !== 'object' ) {
+				n[k] = {};
+			}
+			n = n[k];
+		}
+		n[keys.shift()] = v;
+	};
+	const forEach = Array.prototype.forEach;
 	const els = jQuery( 'input[type=checkbox][data-feature]' );
-	const features = reduce.call( els, function( acc, el ) {
-		return Object.assign( {}, acc, { [ jQuery( el ).data( 'feature' ) ] : jQuery( el ).is( ':checked' ) } );
-	}, {} );
+	forEach.call( els, function( el ) {
+		assign( el, jQuery( el ).is( ':checked' ) );
+	} );
 	const selects = jQuery( 'select[data-feature]' );
-	const features_in_selects = reduce.call( selects, function( acc, el ) {
-		return Object.assign( {}, acc, { [ jQuery( el ).data( 'feature' ) ] : jQuery( el ).val() } );
-	}, {} );
+	forEach.call( selects, function( el ) {
+		assign( el, jQuery( el ).val() );
+	} );
 	const text_inputs = jQuery( 'input[type=text][data-feature]' );
-	const features_in_text_inputs = reduce.call( text_inputs, function( acc, el ) {
-		return Object.assign( {}, acc, { [ jQuery( el ).data( 'feature' ) ] : jQuery( el ).val() } );
-	}, {} );
-	const features_in_jetpack_products_inputs = {
-		'jetpack-products': reduce.call(
-			jQuery( 'input[data-feature="jetpack-products"]' ),
-			function( acc, el ) {
-				const $this = jQuery(el);
-				const value = !$this.is( '[type="checkbox"]' ) || $this.is( ':checked' )
-					? $this.val()
-					: '';
+	forEach.call( text_inputs, function( el ) {
+		assign( el, jQuery( el ).val() );
+	} );
+	features['jetpack-products'] = Array.prototype.reduce.call(
+		jQuery( 'input[data-feature="jetpack-products"]' ),
+		function( acc, el ) {
+			const $this = jQuery(el);
+			const value = !$this.is( '[type="checkbox"]' ) || $this.is( ':checked' )
+				? $this.val()
+				: '';
 
-				return acc.concat( value.split( ',' ).filter( Boolean ) );
-			},
-			[]
-		),
-	}
-	return Object.assign( features, features_in_selects, features_in_text_inputs, features_in_jetpack_products_inputs );
+			return acc.concat( value.split( ',' ).filter( Boolean ) );
+		},
+		[]
+	);
+	return features;
 }
 
 function collectFeaturesFromQueryString() {
@@ -287,13 +299,28 @@ function favicon_update_colour( colour ) {
     }
 }
 
-function getAvailableJetpackBetaBranches() {
-	return fetch( '/wp-json/jurassic.ninja/available-jetpack-built-branches')
+function getAvailableJetpackBetaPlugins() {
+	return fetch( '/wp-json/jurassic.ninja/jetpack-beta/plugins')
+		.then( response => response.json() )
+		.then( body => {
+			let plugins = Object.keys( body.data ).map( slug => {
+				return Object.assign( { slug: slug }, body.data[slug] );
+			} );
+			plugins.sort( ( a, b ) => a.name.localeCompare( b.name ) );
+			return plugins;
+		} );
+}
+function getAvailableJetpackBetaBranches( plugin_slug ) {
+	return fetch( '/wp-json/jurassic.ninja/jetpack-beta/plugins/' + ( plugin_slug || 'jetpack' ) + '/branches' )
 		.then( response => response.json() )
 		.then( body => {
 			let branches = [];
-			branches.push( body.data.master );
-			branches.push( body.data.rc );
+			if ( body.data.master ) {
+				branches.push( body.data.master );
+			}
+			if ( body.data.rc ) {
+				branches.push( body.data.rc );
+			}
 			branches = branches.concat( Object.keys( body.data.pr ).map( title => {
 				return body.data.pr[title];
 			} ) );
@@ -316,39 +343,94 @@ function toggleJetpackProducts() {
 function hookJetpackBranches() {
 	const $jetpack_toggle = jQuery( '[data-feature=jetpack]' );
 	const $jetpack_beta_toggle = jQuery( '[data-feature=jetpack-beta]' );
+	const $branches_list = jQuery('#jetpack_beta_branches_group');
 	const $search_input = jQuery('#jetpack_branch');
 	const search_results = document.getElementById('jetpack_branches');
 
 	$jetpack_toggle.change( toggleJetpackProducts );
 	toggleJetpackProducts();
 
-	$jetpack_beta_toggle.change( () => {
-		if ( $jetpack_beta_toggle.is( ':checked' ) ) {
-			$search_input.attr( 'disabled', false );
-		} else {
-			$search_input.attr( 'disabled', true );
-		}
-	} );
+	let onchange;
+	if ( $branches_list.length ) {
+		onchange = () => {
+			// New style.
+			if ( $jetpack_beta_toggle.is( ':checked' ) ) {
+				$branches_list.show();
+			} else {
+				$branches_list.hide();
+			}
+		};
+	} else {
+		onchange = () => {
+			// Old style.
+			if ( $jetpack_beta_toggle.is( ':checked' ) ) {
+				$search_input.attr( 'disabled', false );
+			} else {
+				$search_input.attr( 'disabled', true );
+			}
+		};
+	}
+	$jetpack_beta_toggle.change( onchange );
+	onchange();
 
-	getAvailableJetpackBetaBranches()
+	getAvailableJetpackBetaPlugins()
 		.then( list => {
-			availableJetpackBetaBranches = list;
-
-			availableJetpackBetaBranches.forEach( branch => {
-				// Create a new <option> element.
-				const option = document.createElement('option');
-				if ( branch.pr ) {
-					option.innerHTML = 'PR #' + branch.pr;
-					option.value = branch.branch;
-				} else if ( branch.branch === 'master' ) {
-					option.innerHTML = 'Bleeding Edge';
-					option.value = 'master';
+			availableJetpackBetaPlugins = list;
+			if ( $branches_list.length ) {
+				$branches_list.empty();
+			}
+			availableJetpackBetaPlugins.forEach( plugin => {
+				if ( $branches_list.length ) {
+					const $div = jQuery( '<div>' );
+					const $label = jQuery( '<label>' );
+					$label.attr( 'for', `jetpack_beta_plugin_${ plugin.slug }` );
+					$label.text( `${ plugin.name } Branch:` );
+					$div.append( $label );
+					$div.append( jQuery( '<br>' ) );
+					const $input = jQuery( '<input class="form-control" role="search" type="text" value="" aria-hidden="false">' );
+					$input.attr( 'id', `jetpack_beta_plugin_${ plugin.slug }` );
+					$input.attr( 'list', `jetpack_beta_plugin_list_${ plugin.slug }` );
+					$input.attr( 'placeholder', `${ plugin.name } branch to enable` );
+					$input.attr( 'data-feature', `branches.${ plugin.slug }` );
+					$div.append( $input );
+					plugin.$search_input = $input;
+					$div.append( jQuery( '<br>' ) );
+					const datalist = document.createElement( 'datalist' );
+					datalist.id = `jetpack_beta_plugin_list_${ plugin.slug }`;
+					plugin.search_results = datalist;
+					$div.append( datalist );
+					$branches_list.append( $div );
+				} else if ( plugin.slug === 'jetpack' ) {
+					plugin.$search_input = $search_input;
+					plugin.search_results = search_results;
 				} else {
-					option.innerHTML = 'Release Candidate';
-					option.value = 'rc';
+					return;
 				}
-				// attach the option to the datalist element
-				search_results.appendChild(option);
+
+				getAvailableJetpackBetaBranches( plugin.slug )
+					.then( list => {
+						plugin.branches = list;
+						if ( plugin.slug === 'jetpack' ) {
+							availableJetpackBetaBranches = list;
+						}
+
+						plugin.branches.forEach( branch => {
+							// Create a new <option> element.
+							const option = document.createElement('option');
+							if ( branch.pr ) {
+								option.innerHTML = 'PR #' + branch.pr;
+								option.value = branch.branch;
+							} else if ( branch.branch === 'master' ) {
+								option.innerHTML = 'Bleeding Edge';
+								option.value = 'master';
+							} else {
+								option.innerHTML = 'Release Candidate';
+								option.value = 'rc';
+							}
+							// attach the option to the datalist element
+							plugin.search_results.appendChild(option);
+						} );
+					} );
 			} );
 		} );
 }

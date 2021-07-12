@@ -63,9 +63,7 @@ Recommended `/specialops` page content:
 <div class="checkbox"><label><input type="checkbox" data-feature="jetpack-beta">&nbsp;Include Jetpack Beta</label></div>
 </li>
 <li>
-<div class="form-group"><label for="jetpack_branch">Jetpack Branch:</label><br><input id="jetpack_branch" class="form-control" role="search" disabled="disabled" list="jetpack_branches" type="text" value="" placeholder="Requires Jetpack Beta plugin" data-feature="branch" aria-hidden="false"><br>
-<datalist id="jetpack_branches"></datalist>
-</div>
+<div class="form-group" id="jetpack_beta_branches_group"></div>
 </li>
 <li>
 <div class="checkbox"><label><input type="checkbox" data-feature="vaultpress">&nbsp;Include VaultPress</label></div>

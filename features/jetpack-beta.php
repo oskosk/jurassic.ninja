@@ -10,10 +10,38 @@ namespace jn;
 add_action(
 	'jurassic_ninja_added_rest_api_endpoints',
 	function () {
+		// Old endpoint, deprecated.
 		add_get_endpoint(
 			'available-jetpack-built-branches',
 			function () {
 				$manifest_url = 'https://betadownload.jetpack.me/jetpack-branches.json';
+				$manifest = json_decode( wp_remote_retrieve_body( wp_remote_get( $manifest_url ) ) );
+				$output = $manifest;
+				return $output;
+			}
+		);
+
+		// New endpoints.
+		add_get_endpoint(
+			'jetpack-beta/plugins',
+			function () {
+				$manifest_url = 'https://betadownload.jetpack.me/plugins.json';
+				$manifest = json_decode( wp_remote_retrieve_body( wp_remote_get( $manifest_url ) ) );
+				$output = $manifest;
+				return $output;
+			}
+		);
+
+		add_get_endpoint(
+			'jetpack-beta/plugins/(?P<plugin>[a-zA-Z0-9-]+)/branches',
+			function ( $data ) {
+				$plugin = $data['plugin'];
+				$manifest_url = 'https://betadownload.jetpack.me/plugins.json';
+				$manifest = json_decode( wp_remote_retrieve_body( wp_remote_get( $manifest_url ) ) );
+				if ( ! isset( $manifest->{$plugin}->manifest_url ) ) {
+					return new \WP_Error( 'unknown_plugin', 'Plugin not known.', array( 'status' => 404 ) );
+				}
+				$manifest_url = $manifest->{$plugin}->manifest_url;
 				$manifest = json_decode( wp_remote_retrieve_body( wp_remote_get( $manifest_url ) ) );
 				$output = $manifest;
 				return $output;
@@ -28,6 +56,7 @@ add_action(
 		$defaults = array(
 			'jetpack-beta' => false,
 			'branch' => false,
+			'branches' => array(),
 		);
 
 		add_action(
@@ -39,9 +68,18 @@ add_action(
 					add_jetpack_beta_plugin();
 				}
 
-				if ( $features['branch'] ) {
-					debug( '%s: Activating Jetpack %s branch in Beta plugin', $domain, $features['branch'] );
-					activate_jetpack_branch( $features['branch'] );
+				// Deprecated parameter.
+				if ( $features['branch'] && ! $features['branches'] ) {
+					$features['branches'] = array( 'jetpack' => $features['branch'] );
+				}
+
+				if ( $features['branches'] ) {
+					foreach ( $features['branches'] as $plugin_name => $branch_name ) {
+						if ( $branch_name ) {
+							debug( '%s: Activating %s plugin %s branch in Beta plugin', $domain, $plugin_name, $branch_name );
+							activate_jetpack_branch( $plugin_name, $branch_name );
+						}
+					}
 				}
 			},
 			10,
@@ -63,23 +101,40 @@ add_action(
 		add_filter(
 			'jurassic_ninja_rest_create_request_features',
 			function ( $features, $json_params ) {
-				$branch = isset( $json_params['branch'] ) && $json_params['branch'] ? $json_params['branch'] : 'master';
 				if ( isset( $json_params['jetpack-beta'] ) && $json_params['jetpack-beta'] ) {
-					$url = get_jetpack_beta_url( $branch );
+
+					// Deprecated parameter.
+					if ( isset( $json_params['branch'] ) && empty( $json_params['branches'] ) ) {
+						$json_params['branches'] = array( 'jetpack' => $json_params['branch'] );
+					}
+
+					// Default.
+					if ( ! isset( $json_params['branches'] ) ) {
+						$json_params['branches'] = array( 'jetpack' => 'master' );
+					}
 
 					$error = null;
-					if ( null === $url ) {
-						$error = new \WP_Error(
-							'failed_to_launch_site_with_branch',
-							/* translators: is a GitHub branch name */
-							sprintf( esc_html__( 'Invalid branch name or not ready yet: %s', 'jurassic-ninja' ), $branch ),
-							array(
-								'status' => 400,
-							)
-						);
+					foreach ( $json_params['branches'] as $plugin_name => $branch_name ) {
+						if ( ! $branch_name ) {
+							continue;
+						}
+
+						$url = get_jetpack_beta_url( $plugin_name, $branch_name );
+						if ( null === $url ) {
+							$error = new \WP_Error(
+								'failed_to_launch_site_with_branch',
+								/* translators: %1$s: Plugin slug. %2$s: GitHub branch name */
+								sprintf( esc_html__( 'Invalid branch name for %1$s or not ready yet: %2$s', 'jurassic-ninja' ), $plugin_name, $branch_name ),
+								array(
+									'status' => 400,
+								)
+							);
+							break;
+						}
+						$features['branches'][ $plugin_name ] = $branch_name;
 					}
 					$features['jetpack-beta'] = null === $error ? $json_params['jetpack-beta'] : $error;
-					$features['branch'] = $branch;
+					$features['branch'] = isset( $features['branches']['jetpack'] ) ? $features['branches']['jetpack'] : null; // Deprecated.
 				}
 
 				return $features;
@@ -129,10 +184,11 @@ function add_jetpack_beta_plugin() {
 /**
  * Activates jetpack branch in Beta plugin
  *
+ * @param string $plugin_name Plugin name.
  * @param string $branch_name Branch name.
  */
-function activate_jetpack_branch( $branch_name ) {
-	$cmd = "wp jetpack-beta branch activate $branch_name";
+function activate_jetpack_branch( $plugin_name, $branch_name ) {
+	$cmd = "wp jetpack-beta activate $plugin_name $branch_name";
 	add_filter(
 		'jurassic_ninja_feature_command',
 		function ( $s ) use ( $cmd ) {
@@ -144,13 +200,20 @@ function activate_jetpack_branch( $branch_name ) {
 /**
  * Get URL for beta download.
  *
+ * @param string $plugin_name Plugin name.
  * @param string $branch_name Branch name.
  *
- * @return string Download URL.
+ * @return string|null Download URL.
  */
-function get_jetpack_beta_url( $branch_name ) {
+function get_jetpack_beta_url( $plugin_name, $branch_name ) {
+	$manifest_url = 'https://betadownload.jetpack.me/plugins.json';
+	$manifest = json_decode( wp_remote_retrieve_body( wp_remote_get( $manifest_url ) ) );
+	if ( ! isset( $manifest->{$plugin_name}->manifest_url ) ) {
+		return null;
+	}
+
 	$branch_name = str_replace( '/', '_', $branch_name );
-	$manifest_url = 'https://betadownload.jetpack.me/jetpack-branches.json';
+	$manifest_url = $manifest->{$plugin_name}->manifest_url;
 	$manifest = json_decode( wp_remote_retrieve_body( wp_remote_get( $manifest_url ) ) );
 
 	if ( ( 'rc' === $branch_name || 'master' === $branch_name ) && isset( $manifest->{$branch_name}->download_url ) ) {
@@ -160,4 +223,6 @@ function get_jetpack_beta_url( $branch_name ) {
 	if ( isset( $manifest->pr->{$branch_name}->download_url ) ) {
 		return $manifest->pr->{$branch_name}->download_url;
 	}
+
+	return null;
 }
